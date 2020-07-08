@@ -62,7 +62,7 @@ def extract_message_attachments(
                                 # message_id: int,
                                 ) -> (bool, bool, bool, list):
     """
-        Zulip upload: the actual file on zulip server/s3 bucket 
+        Zulip upload: the actual file on zulip server/s3 bucket
         Zulip attachment: the pointer between the upload and a message (one upload -> many attachments -> many messages)
     """
     markdown_links = []
@@ -72,7 +72,7 @@ def extract_message_attachments(
     # if a message has attachments it will fall under ['attachments']['results'] as a list
     # We are assuming the createUser of the attachment is the same as the user who posted the message
     # We are also assuming the attachments url's are available publically. In most cases I believe it's ryver's s3
-    
+
     # Ryver can be a bit weird in the api depending on where its queried from, but all these should be present if there is an attachment
     if 'attachments' in message and 'results' in message['attachments'] and type(message['attachments']['results']) == list and len(message['attachments']['results']) > 0:
         for file in message['attachments']['results']:
@@ -86,7 +86,7 @@ def extract_message_attachments(
                 file_extension = '.' + file['type'][6:]
             if 'application/' in file['type']:
                 file_extension = '.' + file['type'][12:]
-            
+
             # zulip expects size, created, name
             file_info = {}
             file_info['size'] = file['fileSize']
@@ -120,7 +120,7 @@ def extract_message_attachments(
 
     # TODO external_link/external_url work goes here
     # This is only applicable if you expect the files to become unavailable in the future. For now the URL's should show in the zulip messages anyways.
-            
+
     return has_attachment, has_link, has_image, markdown_links
 
 def create_zulip_topics_and_import_messages(user_map: dict,
@@ -131,7 +131,7 @@ def create_zulip_topics_and_import_messages(user_map: dict,
                                             forum_recipient_map: dict,
                                             tw_recipient_map: dict) -> (List[ZerverFieldsT], List[ZerverFieldsT]):
     # Note: user id mentions are not implemented yet, I believe they just add to a notification stream though
-        # Part of the import code deletes the key in realm['zerver_messages']['user_mentions'] in the import_realm.py anyways?
+    # Part of the import code deletes the key in realm['zerver_messages']['user_mentions'] in the import_realm.py anyways?
     # Note: you don't need to do anything special to create topics, just make a message to the topic name for a recipient group
     # Note: Zulip has a max topic name length of 60
     # Note: Zulip has a max content length of 10000
@@ -146,18 +146,18 @@ def create_zulip_topics_and_import_messages(user_map: dict,
     # Usermessages are required if you want old messages to actually show up (by default), this might not matter with setting stream history on
     # Above might not be true after setting the history flag
     usermessages = []
-    
+
     # Handle forums
     for forum_id in forum_stream_map:
         raw_forum = api_call_build_execute('/forums(id={})'.format(forum_id), only_count=False) # Just to re-extract the name
-        
+
         # Main Topic
         raw_forum_main_topic_chats_count = api_call_build_execute('/forums(id={})/Chat.History()'.format(forum_id), only_count=True) # Chat.History() is a shortcut for count here
         if raw_forum_main_topic_chats_count > 0:
             raw_forum_main_topic_chats = api_call_build_execute('/forums(id={})/Chat.History()'.format(forum_id), results=raw_forum_main_topic_chats_count, hard_results=True, select_str='from,body,when,attachments', expand='attachments', only_count=False)
             #main_topic_name = raw_forum['name'][:60]
             main_topic_name = '(no topic)' # This seems to be more zulip standard for the main topic
-            
+
             print("Importing messages from Forum '{}'".format(raw_forum['name']))
             main_topic_recipient_id = forum_recipient_map[forum_id]
             for main_topic_chat in raw_forum_main_topic_chats:
@@ -170,7 +170,7 @@ def create_zulip_topics_and_import_messages(user_map: dict,
                     main_topic_content = ''
                 rendered_content = None
                 ryver_user_id = main_topic_chat['from']['id']
-                
+
                 zulip_message = build_message(topic_name=main_topic_name,
                                                 date_sent=message_time,
                                                 message_id=message_id,
@@ -178,7 +178,7 @@ def create_zulip_topics_and_import_messages(user_map: dict,
                                                 rendered_content=rendered_content,
                                                 user_id=user_map[ryver_user_id],
                                                 recipient_id=main_topic_recipient_id)
-                
+
                 build_usermessages(
                     zerver_usermessage=usermessages,
                     subscriber_map=subscriber_map,
@@ -195,15 +195,15 @@ def create_zulip_topics_and_import_messages(user_map: dict,
                     zulip_message['content'] += '\n'.join(markdown_links)
                 messages.append(zulip_message)
                 message_id += 1
-                
-                
+
+
             # Forum Topics
             # Topics only exists if this flag is true
             if raw_forum['sharePosts'] == True:
                 raw_forum_topics_count = api_call_build_execute('/forums(id={})/Post.Stream()'.format(forum_id), only_count=True)
                 if raw_forum_topics_count > 0:
                     raw_forum_topics = api_call_build_execute('/forums(id={})/Post.Stream()'.format(forum_id), only_count=False, results=raw_forum_topics_count, hard_results=True, select_str='id,subject,createDate,body,createUser,attachments', expand='attachments')
-                    
+
                     for forum_topic in raw_forum_topics:
                         # The first message is embedded in this object and not available in /posts
                         post_id = forum_topic['id'] # used below for the rest of the messages
@@ -214,7 +214,7 @@ def create_zulip_topics_and_import_messages(user_map: dict,
                         else:
                             topic_content = ''
                         rendered_content = None
-                        
+
                         zulip_message = build_message(topic_name=topic_name,
                                                         date_sent=float(dateutil.parser.parse(forum_topic['createDate']).timestamp()),
                                                         message_id=message_id,
@@ -238,12 +238,12 @@ def create_zulip_topics_and_import_messages(user_map: dict,
                             zulip_message['content'] += '\n'.join(markdown_links)
                         messages.append(zulip_message)
                         message_id += 1
-                        
+
                         # Get the rest of the forum topic messages
                         raw_topic_posts_count = api_call_build_execute('/posts(id={})/comments'.format(post_id), only_count=True)
                         if raw_topic_posts_count > 0:
                             raw_topic_posts = api_call_build_execute('/posts(id={})/comments'.format(post_id), only_count=False, results=raw_topic_posts_count, select_str='createDate,createUser,comment,attachments', expand='createUser,attachments')
-                            
+
                             for post in raw_topic_posts:
                                 post_content = post['comment'] # This can be null which is None in json
                                 if post_content is not None:
@@ -273,11 +273,11 @@ def create_zulip_topics_and_import_messages(user_map: dict,
                                     zulip_message['content'] += '\n'.join(markdown_links)
                                 messages.append(zulip_message)
                                 message_id += 1
-                
+
     # Handle Teams/Workrooms
     for tw_id in teams_workrooms_stream_map:
         raw_tw = api_call_build_execute('/workrooms(id={})'.format(tw_id), only_count=False) # Just to re-extract the name
-        
+
         # Main Topic
         raw_tw_main_topic_chats_count = api_call_build_execute('/workrooms(id={})/Chat.History()'.format(tw_id), only_count=True) # Chat.History() is a shortcut for count here
         if raw_tw_main_topic_chats_count > 0:
@@ -294,11 +294,14 @@ def create_zulip_topics_and_import_messages(user_map: dict,
                 else:
                     main_topic_content = ''
                 rendered_content = None
-                ryver_user_id = main_topic_chat['from']['id']
+                if 'id' in main_topic_chat['from']:
+                    ryver_user_id = main_topic_chat['from']['id']
+                else:
+                    ryver_user_id: 0
                 if ryver_user_id not in user_map:
                     print('test for errors 12322')
                     continue
-                
+
                 zulip_message = build_message(topic_name=main_topic_name,
                                                 date_sent=message_time,
                                                 message_id=message_id,
@@ -322,14 +325,14 @@ def create_zulip_topics_and_import_messages(user_map: dict,
                     zulip_message['content'] += '\n'.join(markdown_links)
                 messages.append(zulip_message)
                 message_id += 1
-        
+
         # Team/Workroom Topics
         # Topics only exists if this flag is true
         if raw_tw['sharePosts'] == True:
             raw_tw_topics_count = api_call_build_execute('/workrooms(id={})/Post.Stream()'.format(tw_id), only_count=True)
             if raw_tw_topics_count > 0:
                 raw_tw_topics = api_call_build_execute('/workrooms(id={})/Post.Stream()'.format(tw_id), only_count=False, results=raw_tw_topics_count, hard_results=True, select_str='id,subject,createDate,body,createUser,attachments', expand='attachments')
-                
+
                 for tw_topic in raw_tw_topics:
                     # The first message is embedded in this object and not available in /posts
                     post_id = tw_topic['id'] # used below for the rest of the messages
@@ -339,16 +342,20 @@ def create_zulip_topics_and_import_messages(user_map: dict,
                         tw_topic_content = tw_topic_content[:10000]
                     else:
                         # When you create a topic from previous messages it will be empty. You might be able to retreive those from an expand.
-                        tw_topic_content = '*Created Topic*' # Maybe change this to enumerate to only apply to message 1 
+                        tw_topic_content = '*Created Topic*' # Maybe change this to enumerate to only apply to message 1
                     rendered_content = None
-                    
-                    
+
+                    if 'id' in tw_topic['createUser']:
+                        topic_user_id = tw_topic['createUser']['id']
+                    else:
+                        topic_user_id: 0
+
                     zulip_message = build_message(topic_name=topic_name,
                                                     date_sent=float(dateutil.parser.parse(tw_topic['createDate']).timestamp()),
                                                     message_id=message_id,
                                                     content=tw_topic_content,
                                                     rendered_content=rendered_content,
-                                                    user_id=user_map[tw_topic['createUser']['id']],
+                                                    user_id=user_map[topic_user_id],
                                                     recipient_id=main_topic_recipient_id)
                     build_usermessages(
                         zerver_usermessage=usermessages,
@@ -358,7 +365,8 @@ def create_zulip_topics_and_import_messages(user_map: dict,
                         mentioned_user_ids=[],
                         is_private=False,
                     )
-                    has_attachment, has_link, has_image, markdown_links = extract_message_attachments(message=tw_topic, zulip_message_id=zulip_message['id'], zulip_user_id=user_map[tw_topic['createUser']['id']], attachments_list=attachments_list, uploads_list=uploads_list)
+
+                    has_attachment, has_link, has_image, markdown_links = extract_message_attachments(message=tw_topic, zulip_message_id=zulip_message['id'], zulip_user_id=user_map[topic_user_id], attachments_list=attachments_list, uploads_list=uploads_list)
                     if has_attachment:
                         zulip_message['has_attachment'] = True
                         zulip_message['has_link'] = has_link
@@ -366,24 +374,30 @@ def create_zulip_topics_and_import_messages(user_map: dict,
                         zulip_message['content'] += '\n'.join(markdown_links)
                     messages.append(zulip_message)
                     message_id += 1
-                    
+
                     # Get the rest of the messages
                     raw_topic_posts_count = api_call_build_execute('/posts(id={})/comments'.format(post_id), only_count=True)
                     if raw_topic_posts_count > 0:
                         raw_topic_posts = api_call_build_execute('/posts(id={})/comments'.format(post_id), only_count=False, results=raw_topic_posts_count, select_str='createDate,comment,createUser,attachments', expand='createUser,attachments')
-                        
+
                         for post in raw_topic_posts:
                             post_content = post['comment'] # This can be null
                             if post_content is not None:
                                 post_content = post_content[:10000]
                             else:
                                 post_content = ''
+
+                            if 'id' in post['createUser']:
+                                post_user_id = post['createUser']['id']
+                            else:
+                                post_user_id: 0
+
                             zulip_message = build_message(topic_name=topic_name,
                                                             date_sent=float(dateutil.parser.parse(post['createDate']).timestamp()),
                                                             message_id=message_id,
                                                             content=post_content,
                                                             rendered_content=rendered_content,
-                                                            user_id=user_map[post['createUser']['id']],
+                                                            user_id=user_map[post_user_id],
                                                             recipient_id=main_topic_recipient_id)
                             build_usermessages(
                                 zerver_usermessage=usermessages,
@@ -393,7 +407,7 @@ def create_zulip_topics_and_import_messages(user_map: dict,
                                 mentioned_user_ids=[],
                                 is_private=False,
                             )
-                            has_attachment, has_link, has_image, markdown_links = extract_message_attachments(message=post, zulip_message_id=zulip_message['id'], zulip_user_id=user_map[post['createUser']['id']], attachments_list=attachments_list, uploads_list=uploads_list)
+                            has_attachment, has_link, has_image, markdown_links = extract_message_attachments(message=post, zulip_message_id=zulip_message['id'], zulip_user_id=user_map[post_user_id], attachments_list=attachments_list, uploads_list=uploads_list)
                             if has_attachment:
                                 zulip_message['has_attachment'] = True
                                 zulip_message['has_link'] = has_link
@@ -401,7 +415,7 @@ def create_zulip_topics_and_import_messages(user_map: dict,
                                 zulip_message['content'] += '\n'.join(markdown_links)
                             messages.append(zulip_message)
                             message_id += 1
-    
+
     message_json['zerver_message'] = messages
     message_json['zerver_usermessage'] = usermessages
     message_filename = os.path.join(config['output_dir'], "messages-000001.json")
@@ -411,10 +425,10 @@ def create_zulip_topics_and_import_messages(user_map: dict,
     return uploads_list, attachments_list
 
 
-def create_subscriptions(user_profiles: List[ZerverFieldsT], 
+def create_subscriptions(user_profiles: List[ZerverFieldsT],
                         user_map: dict,
-                        streams: List[ZerverFieldsT], 
-                        default_stream: List[ZerverFieldsT], 
+                        streams: List[ZerverFieldsT],
+                        default_stream: List[ZerverFieldsT],
                         forum_stream_map: List[ZerverFieldsT],
                         forum_stream_members: dict,
                         teams_workrooms_stream_map: List[ZerverFieldsT],
@@ -429,7 +443,7 @@ def create_subscriptions(user_profiles: List[ZerverFieldsT],
     subscriptions = []
     recipient_group_id = 0
     subscription_id = 0
-    
+
     # NOTE: There should only be 1 recipient group per stream as far as I know
     # NOTE: build_recipient type_id is equivilent to stream_id
     # Sub everyone to default stream
@@ -440,7 +454,7 @@ def create_subscriptions(user_profiles: List[ZerverFieldsT],
         subscriptions.append(subscription)
         subscription_id += 1
     recipient_group_id += 1
-    
+
     # Everyone subs to themselves, is this necessary?
     for user in user_profiles:
         recipient = build_recipient(type_id=user['id'], recipient_id=recipient_group_id, type=Recipient.PERSONAL)
@@ -449,7 +463,7 @@ def create_subscriptions(user_profiles: List[ZerverFieldsT],
         subscriptions.append(subscription)
         recipient_group_id += 1
         subscription_id += 1
-    
+
     # For each forum sub all members
     for forum_id in forum_stream_map:
         if forum_id not in forum_stream_members:
@@ -469,7 +483,7 @@ def create_subscriptions(user_profiles: List[ZerverFieldsT],
                     subscriptions.append(subscription)
                 subscription_id += 1
             recipient_group_id += 1
-    
+
     # For each team/workroom sub all members
     for tw_id in teams_workrooms_stream_map:
         if tw_id not in teams_workrooms_stream_members:
@@ -489,10 +503,10 @@ def create_subscriptions(user_profiles: List[ZerverFieldsT],
                     subscriptions.append(subscription)
                 subscription_id += 1
             recipient_group_id += 1
-    
+
 
     logging.info("==Ryver Data Handler - Finished Building Subscriptions==")
-    
+
     # NOTE topic inside forums/teams/workrooms will be handled seperately. Their membership is soft in the sense anyone in the recipient group can join them but it only lists participants
     return recipient_groups, subscriptions, forum_recipient_map, tw_recipient_map
 
@@ -514,7 +528,7 @@ def create_streams_and_map(timestamp: Any) -> (list, dict, dict, dict, dict, dic
     teams_workrooms_stream_map = {} # type: Dict[int, int]
     teams_workrooms_stream_members = {} # type: Dict[int, list[user_ryver_id]]
     # topics_stream_map = {} # type: Dict[int, int]
-    
+
     # Default stream will have no content
     stream_name = 'Default Stream'
     stream_description = "Imported users from ryver (no content)"
@@ -523,13 +537,13 @@ def create_streams_and_map(timestamp: Any) -> (list, dict, dict, dict, dict, dic
     streams.append(dstream)
     # NOTE: Default stream has to be in a list or it will throw an error on import because it will treat the object['stream'] as a python integer slice
     default_stream = [build_defaultstream(realm_id=realm_id, stream_id=0, defaultstream_id=0)]
-    
-    # get the raw forum data, 
+
+    # get the raw forum data,
     # !! NOTE the user has to be a participant/member of the forum or workroom/team in order to query these !!
     forum_count = api_call_build_execute('/forums', results=0, only_count=True)
     if forum_count > 0:
         raw_api_forums = api_call_build_execute('/forums', only_count=False, select_str='id,name,description,createDate,members', expand='members', results=forum_count) # results=1
-        
+
         for forum in raw_api_forums:
             if forum['id'] not in forum_stream_map:
                 forum_stream_map[forum['id']] = stream_id
@@ -560,8 +574,8 @@ def create_streams_and_map(timestamp: Any) -> (list, dict, dict, dict, dict, dic
                 except Exception as e:
                     print('Failed to parse forum with exception {}:\n{}'.format(e, forum))
                 stream_id += 1
-    
-    # get the raw team/workroom data, 
+
+    # get the raw team/workroom data,
     # !! NOTE the user has to be a participant/member of the forum or workroom/team in order to query these !!
     team_workroom_count = api_call_build_execute('/workrooms', only_count=True)
     if team_workroom_count > 0:
@@ -596,14 +610,14 @@ def create_streams_and_map(timestamp: Any) -> (list, dict, dict, dict, dict, dic
                 except Exception as e:
                     print('Failed to parse team/workroom with exception {}:\n{}'.format(e, forum))
                 stream_id += 1
-        
+
     # We want users to see history if they are subbed after the import by default (to match ryver behavior)
     for stream in streams:
         stream['history_public_to_subscribers'] = True
     logging.info("==Ryver Data Handler - Finished Building Streams and User Lists==")
     return streams, default_stream, forum_stream_map, teams_workrooms_stream_map, forum_stream_members, teams_workrooms_stream_members
-    
-    
+
+
 
 def create_user_profiles_and_map(user_count: int) -> (list, dict, dict):
     logging.info("==Ryver Data Handler - Building user profiles and map==")
@@ -612,10 +626,10 @@ def create_user_profiles_and_map(user_count: int) -> (list, dict, dict):
     user_map = {} # type: Dict[int, int]
     user_bot_map = {} # type: Dict[str, int] DEPRECATED
     user_id = 0
-    
+
     # get the raw data
     raw_api_users = api_call_build_execute('/users', results=user_count, only_count=False, select_str='id,displayName,emailAddress,type,username,createDate,locked')
-    
+
     for user in raw_api_users:
         if user['id'] not in user_map:
             user_map[user['id']] = user_id
@@ -623,7 +637,7 @@ def create_user_profiles_and_map(user_count: int) -> (list, dict, dict):
             if user['emailAddress'] is None:
                 user['emailAddress'] = '{}@ryverimport.com'.format(user['displayName']).replace(' ', '_')
                 print('Affixed fake email for user "{}" who is of type "{}"'.format(user['displayName'], user['type']))
-            
+
             try:
                 # the ['role'] key doesn't matter zulip imports all users as basic users. If that changes its ROLE_ADMIN ROLE_USER ROLE_BOT ROLE_GUEST strings in a list
                 # Build userprofile object, pointer is just a unique message id counter
@@ -652,7 +666,7 @@ def create_user_profiles_and_map(user_count: int) -> (list, dict, dict):
             except Exception as e:
                 print('Failed to parse user with exception {}:\n{}'.format(e, user))
             user_id += 1
-    
+
     logging.info("==Ryver Data Handler - Finished building user profiles and map==")
     return user_profiles, user_map, user_bot_map
 
@@ -688,7 +702,7 @@ def api_call_build_execute(endpoint: str, results: int = 0, hard_results: bool =
         # There is a direct attachment/files endpoint but it doens't have a clean way to point back to the source
         # files_endpoint = '/files'
             # Note this is not a direct download but just the json description object
-            
+
     resp = None
     try:
         query_params = []
@@ -702,14 +716,14 @@ def api_call_build_execute(endpoint: str, results: int = 0, hard_results: bool =
                 raise Exception
             else:
                 return response_count_extractor(resp.json())
-        
+
         else:
             # Common query strings
             if select_str != '':
                 query_params.append('$select={}'.format(select_str))
             if expand != '':
                 query_params.append('$expand={}'.format(expand))
-                
+
             # hard_results apply to the functional endpoints eg Chat.History()
             if results > 50 and hard_results == False:
                 total = 0
@@ -728,7 +742,7 @@ def api_call_build_execute(endpoint: str, results: int = 0, hard_results: bool =
                         raise Exception
                     else:
                         json_resp = resp.json()
-                        
+
                         if 'd' in json_resp and 'results' in json_resp['d']:
                             final_results.extend(json_resp['d']['results'])
                         else:
@@ -739,13 +753,17 @@ def api_call_build_execute(endpoint: str, results: int = 0, hard_results: bool =
                 print('Results for {}, {}'.format(endpoint, len(final_results)))
                 return final_results
             else:
-                if results != 0:
+                if results != 0 and results > 10000:
+                    query_params.append('$top=10000')
+                elif results != 0:
                     query_params.append('$top={}'.format(results))
                 #$top isn't needed if 50 or less
                 url = config['base_url'] + endpoint + '?' + '&'.join(query_params)
                 resp = requests.get(url, headers=headers)
                 if not resp.status_code == 200:
                     print('not status code 200')
+                    print(url)
+                    print(resp.status_code)
                     raise Exception
                 else:
                     json_resp = resp.json()
@@ -763,7 +781,7 @@ def response_results_extractor(json_resp: dict) -> dict:
         return json_resp['d']['results']
     else:
         print('Failed to extract results')
-        return {} 
+        return {}
 
 def response_count_extractor(json_resp: dict) -> int:
     # Typically looks like {'d': {'results': [], '__count': 42}}
@@ -791,11 +809,11 @@ def do_convert_data(base64: str, api_endpoint: str, output_dir: str, threads: in
     # Lazy globals
     config['base_url'] = api_endpoint
     config['output_dir'] = output_dir
-    
+
     # Copied from gitter import not sure what it impacts
     realm_subdomain = ""
     domain_name = settings.EXTERNAL_HOST
-    
+
     success, user_count = test_api_call()
     if not success:
         return
@@ -805,16 +823,16 @@ def do_convert_data(base64: str, api_endpoint: str, output_dir: str, threads: in
     # Default realm using google and email as auth methods, last argument is description from imported from
     zerver_realm = build_zerver_realm(realm_id, realm_subdomain, NOW, 'Ryver')  # type: List[ZerverFieldsT]
     realm = build_realm(zerver_realm, realm_id, domain_name)
-    
+
     ## Users ##
     user_profiles, user_map, user_bot_map = create_user_profiles_and_map(user_count=user_count)
-    
+
     ## Streams ##
     streams, default_stream, forum_stream_map, teams_workrooms_stream_map, forum_stream_members, teams_workrooms_stream_members = create_streams_and_map(timestamp=int(NOW))
-    
+
     ## Recipient Groups and Subscriptions ##
     recipient_groups, subscriptions, forum_recipient_map, tw_recipient_map = create_subscriptions(user_profiles, user_map, streams, default_stream, forum_stream_map, forum_stream_members, teams_workrooms_stream_map, teams_workrooms_stream_members)
-    
+
     ## Apply the base setup to the realm ##
     realm['zerver_userprofile'] = user_profiles
     realm['zerver_stream'] = streams
@@ -823,9 +841,9 @@ def do_convert_data(base64: str, api_endpoint: str, output_dir: str, threads: in
     realm['zerver_subscription'] = subscriptions
     # This is needed to fix the order of messages appearing in the UI. Alternatively fixing the message id #'s would work
     realm['sort_by_date'] = True
-    
+
     subscriber_map = make_subscriber_map(zerver_subscription=realm['zerver_subscription'])
-    
+
     ## Get all the messages ##
     uploads_list, attachments_list = create_zulip_topics_and_import_messages(user_map, user_bot_map, subscriber_map, forum_stream_map, teams_workrooms_stream_map, forum_recipient_map, tw_recipient_map)
 
@@ -846,7 +864,7 @@ def do_convert_data(base64: str, api_endpoint: str, output_dir: str, threads: in
     create_converted_data_files(attachment_records, output_dir, '/attachment.json')
 
     subprocess.check_call(["tar", "-czf", output_dir + '.tar.gz', output_dir, '-P'])
-    
+
     logging.info("==Ryver Data Handler - Zulip data dump created at {} ==".format(output_dir))
     logging.info("==Ryver Data Handler - Conversion Complete. Next run \"./manage.py import '' {}\"==".format(output_dir))
 
