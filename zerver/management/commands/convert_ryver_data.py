@@ -56,7 +56,7 @@ class Command(BaseCommand):
         if base64 is None or base64 == '':
             account_user = options["account_user"]
             if account_user is None or account_user == '':
-                raise CommandError('If no base64 encoding for account was included, you must enter a valid --acount-user in order to extract')
+                raise CommandError('If no base64 encoding for account was included, you must enter a valid --account-user in order to extract')
             else:
                 print('Please Input password for account: {}'.format(account_user))
                 # grab secure password from command line next
