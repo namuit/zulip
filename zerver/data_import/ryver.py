@@ -137,18 +137,23 @@ def create_zulip_topics_and_import_messages(user_map: dict,
     # Note: Zulip has a max content length of 10000
     # Note: Zulip Message Contents have a not-null constraint, this affects attachment only messages
     logging.info("==Ryver Data Handler - Importing Ryver Messages==")
-    message_json = {}
     message_id = 0
     attachment_id = 0
-    messages = []
     uploads_list = []
     attachments_list = []
     # Usermessages are required if you want old messages to actually show up (by default), this might not matter with setting stream history on
     # Above might not be true after setting the history flag
+    message_json = {}
+    messages = []
     usermessages = []
+
+    dump_file_id = 1
 
     # Handle forums
     for forum_id in forum_stream_map:
+        message_json = {}
+        messages = []
+        usermessages = []
         raw_forum = api_call_build_execute('/forums(id={})'.format(forum_id), only_count=False) # Just to re-extract the name
 
         # Main Topic
@@ -288,9 +293,19 @@ def create_zulip_topics_and_import_messages(user_map: dict,
                                     zulip_message['content'] += '\n'.join(markdown_links)
                                 messages.append(zulip_message)
                                 message_id += 1
+        message_json['zerver_message'] = messages
+        message_json['zerver_usermessage'] = usermessages
+        # to fix
+        message_filename = os.path.join(config['output_dir'], f"messages-{dump_file_id:06}.json")
+        logging.info("==Ryver Data Handler - Writing Messages to {}==".format(message_filename))
+        write_data_to_file(os.path.join(message_filename), message_json)
+        dump_file_id += 1
 
     # Handle Teams/Workrooms
     for tw_id in teams_workrooms_stream_map:
+        message_json = {}
+        messages = []
+        usermessages = []
         raw_tw = api_call_build_execute('/workrooms(id={})'.format(tw_id), only_count=False) # Just to re-extract the name
 
         # Main Topic
@@ -431,11 +446,13 @@ def create_zulip_topics_and_import_messages(user_map: dict,
                             messages.append(zulip_message)
                             message_id += 1
 
-    message_json['zerver_message'] = messages
-    message_json['zerver_usermessage'] = usermessages
-    message_filename = os.path.join(config['output_dir'], "messages-000001.json")
-    logging.info("==Ryver Data Handler - Writing Messages to {}==".format(message_filename))
-    write_data_to_file(os.path.join(message_filename), message_json)
+        message_json['zerver_message'] = messages
+        message_json['zerver_usermessage'] = usermessages
+
+        message_filename = os.path.join(config['output_dir'], f"messages-{dump_file_id:06}.json")
+        logging.info("==Ryver Data Handler - Writing Messages to {}==".format(message_filename))
+        write_data_to_file(os.path.join(message_filename), message_json)
+        dump_file_id += 1
     logging.info("==Ryver Data Handler - Finished Importing Ryver Messages==")
     return uploads_list, attachments_list
 
@@ -650,7 +667,9 @@ def create_user_profiles_and_map(user_count: int) -> (list, dict, dict):
             user_map[user['id']] = user_id
             # Ryver Bots do not have email and it's a constraint on the database so we need to depend on displayName which is unique for them
             if user['emailAddress'] is None:
-                user['emailAddress'] = '{}@ryverimport.com'.format(user['displayName']).replace(' ', '_')
+                letters = string.ascii_lowercase
+                name_bot = user['displayName'].join('.').join(random.choice(letters) for i in range(4))
+                user['emailAddress'] = '{}@ryverimport.com'.format(name_bot).replace(' ', '_')
                 print('Affixed fake email for user "{}" who is of type "{}"'.format(user['displayName'], user['type']))
 
             try:
