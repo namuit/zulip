@@ -4,6 +4,8 @@ import logging
 import subprocess
 import ujson
 import requests
+import string
+import random
 from requests.models import Response
 from copy import copy
 
@@ -667,8 +669,7 @@ def create_user_profiles_and_map(user_count: int) -> (list, dict, dict):
             user_map[user['id']] = user_id
             # Ryver Bots do not have email and it's a constraint on the database so we need to depend on displayName which is unique for them
             if user['emailAddress'] is None:
-                letters = string.ascii_lowercase
-                name_bot = user['displayName'].join('.').join(random.choice(letters) for i in range(4))
+                name_bot = user['displayName'].join('.').join(random.choice(string.ascii_lowercase) for i in range(4))
                 user['emailAddress'] = '{}@ryverimport.com'.format(name_bot).replace(' ', '_')
                 print('Affixed fake email for user "{}" who is of type "{}"'.format(user['displayName'], user['type']))
 
