@@ -96,6 +96,10 @@ def extract_message_attachments(
             file_info['name'] = file['fileName']
             # This is a fix to allow image rendering and proper file extensions
             file_info['zulip_path'] = file['url'] if file_extension == '' else file['url'] + file_extension
+            file_info['zulip_path'] = ''.join(random.choice(string.ascii_lowercase) for i in range(4)) + file_info['zulip_path']
+
+            if "contattafiles.s3.us-west-1.amazonaws.com" not in file['url']:
+                continue
 
             # path would be the download url
             # s3_path will be the local path
@@ -182,12 +186,20 @@ def create_zulip_topics_and_import_messages(user_map: dict,
                 else:
                     ryver_user_id: 1252837
 
+                if ryver_user_id is None or not ryver_user_id:
+                    ryver_user_id: 1252837
+
+                if ryver_user_id not in user_map:
+                    print(ryver_user_id)
+                    print('test for errors 12322')
+                    continue
+
                 zulip_message = build_message(topic_name=main_topic_name,
                                                 date_sent=message_time,
                                                 message_id=message_id,
                                                 content=main_topic_content,
                                                 rendered_content=rendered_content,
-                                                user_id=user_map.get(ryver_user_id, 1252837),
+                                                user_id=user_map.get(ryver_user_id),
                                                 recipient_id=main_topic_recipient_id)
 
                 build_usermessages(
@@ -198,7 +210,7 @@ def create_zulip_topics_and_import_messages(user_map: dict,
                     mentioned_user_ids=[],
                     is_private=False,
                 )
-                has_attachment, has_link, has_image, markdown_links = extract_message_attachments(message=main_topic_chat, zulip_message_id=zulip_message['id'], zulip_user_id=user_map.get(ryver_user_id, 1252837), attachments_list=attachments_list, uploads_list=uploads_list)
+                has_attachment, has_link, has_image, markdown_links = extract_message_attachments(message=main_topic_chat, zulip_message_id=zulip_message['id'], zulip_user_id=user_map.get(ryver_user_id), attachments_list=attachments_list, uploads_list=uploads_list)
                 if has_attachment:
                     zulip_message['has_attachment'] = True
                     zulip_message['has_link'] = has_link
@@ -231,12 +243,20 @@ def create_zulip_topics_and_import_messages(user_map: dict,
                         else:
                             ryver_user_id: 1252837
 
+                        if ryver_user_id is None or not ryver_user_id:
+                            ryver_user_id: 1252837
+
+                        if ryver_user_id not in user_map:
+                            print(ryver_user_id)
+                            print('test for errors 12322')
+                            continue
+
                         zulip_message = build_message(topic_name=topic_name,
                                                         date_sent=float(dateutil.parser.parse(forum_topic['createDate']).timestamp()),
                                                         message_id=message_id,
                                                         content=topic_content,
                                                         rendered_content=rendered_content,
-                                                        user_id=user_map.get(ryver_user_id, 1252837),
+                                                        user_id=user_map.get(ryver_user_id),
                                                         recipient_id=main_topic_recipient_id)
                         build_usermessages(
                             zerver_usermessage=usermessages,
@@ -246,7 +266,7 @@ def create_zulip_topics_and_import_messages(user_map: dict,
                             mentioned_user_ids=[],
                             is_private=False,
                         )
-                        has_attachment, has_link, has_image, markdown_links = extract_message_attachments(message=forum_topic, zulip_message_id=zulip_message['id'], zulip_user_id=user_map.get(ryver_user_id, 1252837), attachments_list=attachments_list, uploads_list=uploads_list)
+                        has_attachment, has_link, has_image, markdown_links = extract_message_attachments(message=forum_topic, zulip_message_id=zulip_message['id'], zulip_user_id=user_map.get(ryver_user_id), attachments_list=attachments_list, uploads_list=uploads_list)
                         if has_attachment:
                             zulip_message['has_attachment'] = True
                             zulip_message['has_link'] = has_link
@@ -272,12 +292,20 @@ def create_zulip_topics_and_import_messages(user_map: dict,
                                 else:
                                     ryver_user_id: 1252837
 
+                                if ryver_user_id is None or not ryver_user_id:
+                                    ryver_user_id: 1252837
+
+                                if ryver_user_id not in user_map:
+                                    print(ryver_user_id)
+                                    print('test for errors 12322')
+                                    continue
+
                                 zulip_message = build_message(topic_name=topic_name,
                                                                 date_sent=float(dateutil.parser.parse(post['createDate']).timestamp()),
                                                                 message_id=message_id,
                                                                 content=post_content,
                                                                 rendered_content=rendered_content,
-                                                                user_id=user_map.get(ryver_user_id, 1252837),
+                                                                user_id=user_map.get(ryver_user_id),
                                                                 recipient_id=main_topic_recipient_id)
                                 build_usermessages(
                                     zerver_usermessage=usermessages,
@@ -287,7 +315,7 @@ def create_zulip_topics_and_import_messages(user_map: dict,
                                     mentioned_user_ids=[],
                                     is_private=False,
                                 )
-                                has_attachment, has_link, has_image, markdown_links = extract_message_attachments(message=post, zulip_message_id=zulip_message['id'], zulip_user_id=user_map.get(ryver_user_id, 1252837), attachments_list=attachments_list, uploads_list=uploads_list)
+                                has_attachment, has_link, has_image, markdown_links = extract_message_attachments(message=post, zulip_message_id=zulip_message['id'], zulip_user_id=user_map.get(ryver_user_id), attachments_list=attachments_list, uploads_list=uploads_list)
                                 if has_attachment:
                                     zulip_message['has_attachment'] = True
                                     zulip_message['has_link'] = has_link
@@ -330,7 +358,12 @@ def create_zulip_topics_and_import_messages(user_map: dict,
                     ryver_user_id = main_topic_chat['from']['id']
                 else:
                     ryver_user_id: 1252837
+
+                if ryver_user_id is None or not ryver_user_id:
+                    ryver_user_id: 1252837
+
                 if ryver_user_id not in user_map:
+                    print(ryver_user_id)
                     print('test for errors 12322')
                     continue
 
@@ -339,7 +372,7 @@ def create_zulip_topics_and_import_messages(user_map: dict,
                                                 message_id=message_id,
                                                 content=main_topic_content,
                                                 rendered_content=rendered_content,
-                                                user_id=user_map.get(ryver_user_id, 1252837),
+                                                user_id=user_map.get(ryver_user_id),
                                                 recipient_id=main_topic_recipient_id)
                 build_usermessages(
                     zerver_usermessage=usermessages,
@@ -349,7 +382,7 @@ def create_zulip_topics_and_import_messages(user_map: dict,
                     mentioned_user_ids=[],
                     is_private=False,
                 )
-                has_attachment, has_link, has_image, markdown_links = extract_message_attachments(message=main_topic_chat, zulip_message_id=zulip_message['id'], zulip_user_id=user_map.get(ryver_user_id, 1252837), attachments_list=attachments_list, uploads_list=uploads_list)
+                has_attachment, has_link, has_image, markdown_links = extract_message_attachments(message=main_topic_chat, zulip_message_id=zulip_message['id'], zulip_user_id=user_map.get(ryver_user_id), attachments_list=attachments_list, uploads_list=uploads_list)
                 if has_attachment:
                     zulip_message['has_attachment'] = True
                     zulip_message['has_link'] = has_link
@@ -382,12 +415,20 @@ def create_zulip_topics_and_import_messages(user_map: dict,
                     else:
                         topic_user_id: 1252837
 
+                    if topic_user_id is None or not topic_user_id:
+                        topic_user_id: 1252837
+
+                    if topic_user_id not in user_map:
+                        print(topic_user_id)
+                        print('test for errors 12322')
+                        continue
+
                     zulip_message = build_message(topic_name=topic_name,
                                                     date_sent=float(dateutil.parser.parse(tw_topic['createDate']).timestamp()),
                                                     message_id=message_id,
                                                     content=tw_topic_content,
                                                     rendered_content=rendered_content,
-                                                    user_id=user_map.get(topic_user_id, 1252837),
+                                                    user_id=user_map.get(topic_user_id),
                                                     recipient_id=main_topic_recipient_id)
                     build_usermessages(
                         zerver_usermessage=usermessages,
@@ -398,7 +439,7 @@ def create_zulip_topics_and_import_messages(user_map: dict,
                         is_private=False,
                     )
 
-                    has_attachment, has_link, has_image, markdown_links = extract_message_attachments(message=tw_topic, zulip_message_id=zulip_message['id'], zulip_user_id=user_map.get(topic_user_id, 1252837), attachments_list=attachments_list, uploads_list=uploads_list)
+                    has_attachment, has_link, has_image, markdown_links = extract_message_attachments(message=tw_topic, zulip_message_id=zulip_message['id'], zulip_user_id=user_map.get(topic_user_id), attachments_list=attachments_list, uploads_list=uploads_list)
                     if has_attachment:
                         zulip_message['has_attachment'] = True
                         zulip_message['has_link'] = has_link
@@ -424,12 +465,20 @@ def create_zulip_topics_and_import_messages(user_map: dict,
                             else:
                                 post_user_id: 1252837
 
+                            if post_user_id is None or not post_user_id:
+                                post_user_id: 1252837
+
+                            if post_user_id not in user_map:
+                                print(post_user_id)
+                                print('test for errors 12322')
+                                continue
+
                             zulip_message = build_message(topic_name=topic_name,
                                                             date_sent=float(dateutil.parser.parse(post['createDate']).timestamp()),
                                                             message_id=message_id,
                                                             content=post_content,
                                                             rendered_content=rendered_content,
-                                                            user_id=user_map.get(post_user_id, 1252837),
+                                                            user_id=user_map.get(post_user_id),
                                                             recipient_id=main_topic_recipient_id)
                             build_usermessages(
                                 zerver_usermessage=usermessages,
@@ -439,7 +488,7 @@ def create_zulip_topics_and_import_messages(user_map: dict,
                                 mentioned_user_ids=[],
                                 is_private=False,
                             )
-                            has_attachment, has_link, has_image, markdown_links = extract_message_attachments(message=post, zulip_message_id=zulip_message['id'], zulip_user_id=user_map.get(post_user_id, 1252837), attachments_list=attachments_list, uploads_list=uploads_list)
+                            has_attachment, has_link, has_image, markdown_links = extract_message_attachments(message=post, zulip_message_id=zulip_message['id'], zulip_user_id=user_map.get(post_user_id), attachments_list=attachments_list, uploads_list=uploads_list)
                             if has_attachment:
                                 zulip_message['has_attachment'] = True
                                 zulip_message['has_link'] = has_link
@@ -513,7 +562,7 @@ def create_subscriptions(user_profiles: List[ZerverFieldsT],
                     print("Ryver forum member id {} not found in user_map".format(forum_member_id))
                     continue
                 else:
-                    subscription = build_subscription(recipient_id=recipient_group_id, user_id=user_map.get(forum_member_id, 1252837), subscription_id=subscription_id)
+                    subscription = build_subscription(recipient_id=recipient_group_id, user_id=user_map.get(forum_member_id), subscription_id=subscription_id)
                     subscriptions.append(subscription)
                 subscription_id += 1
             recipient_group_id += 1
@@ -669,7 +718,7 @@ def create_user_profiles_and_map(user_count: int) -> (list, dict, dict):
             user_map[user['id']] = user_id
             # Ryver Bots do not have email and it's a constraint on the database so we need to depend on displayName which is unique for them
             if user['emailAddress'] is None:
-                name_bot = user['displayName'].join('.').join(random.choice(string.ascii_lowercase) for i in range(4))
+                name_bot = user['displayName'] + '.' + ''.join(random.choice(string.ascii_lowercase) for i in range(4))
                 user['emailAddress'] = '{}@ryverimport.com'.format(name_bot).replace(' ', '_')
                 print('Affixed fake email for user "{}" who is of type "{}"'.format(user['displayName'], user['type']))
 
